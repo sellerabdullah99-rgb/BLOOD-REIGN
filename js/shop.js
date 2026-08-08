@@ -5,7 +5,7 @@
 window.BR = window.BR || {};
 
 BR.shop = (function () {
-  const { $, $$, escapeHtml, formatPKR, starString, sendDiscordWebhook, toast, debounce } = BR.utils;
+  const { $, $$, escapeHtml, starString, sendDiscordWebhook, toast, debounce } = BR.utils;
   let activeCategory = 'All';
   let searchTerm = '';
   let currentProducts = [];
@@ -25,7 +25,7 @@ BR.shop = (function () {
       <h4 class="product-name">${escapeHtml(p.name)}</h4>
       <div class="stars">${starString(p.rating)} <span class="muted">${p.rating}</span></div>
       <div class="product-bottom">
-        <span class="product-price">${formatPKR(p.price)}</span>
+        <span class="product-price">🪙 ${(p.coin_price || 0).toLocaleString()}</span>
         <button class="btn btn-icon btn-primary" data-buy-product="${p.id}" aria-label="Order ${escapeHtml(p.name)}">
           <i class="fa-brands fa-discord"></i>
         </button>
@@ -63,7 +63,8 @@ BR.shop = (function () {
   function openOrderModal(product) {
     const profile = BR.auth.getProfile();
     const coins = profile?.coins || 0;
-    const applicableDiscounts = BR.config.DISCOUNT_REWARDS.filter(r => r.cost <= coins);
+    const price = product.coin_price || 0;
+    const canAfford = coins >= price;
 
     BR.ui.openModal('orderModal', {
       title: 'Confirm Order',
@@ -71,46 +72,35 @@ BR.shop = (function () {
         <div class="card" style="margin-bottom:16px">
           <h4 style="margin-bottom:4px">${escapeHtml(product.name)}</h4>
           <div class="muted" style="margin-bottom:8px">${escapeHtml(product.brand)} • ${escapeHtml(product.category)}</div>
-          <div class="product-price" style="font-size:var(--text-xl)">${formatPKR(product.price)}</div>
+          <div class="product-price" style="font-size:var(--text-xl)">🪙 ${price.toLocaleString()}</div>
         </div>
+        <p class="muted" style="margin-bottom:14px;font-size:var(--text-sm)">Your balance: <strong>🪙 ${coins.toLocaleString()}</strong>${canAfford ? '' : ` — you need ${(price - coins).toLocaleString()} more. Earn coins in the Coins tab.`}</p>
         <label class="field-label">Delivery Address</label>
-        <textarea class="textarea" id="orderAddress" rows="3" placeholder="House #, Street, Area, City" style="margin-bottom:14px"></textarea>
-        ${applicableDiscounts.length ? `
-          <label class="field-label">Use a Coin Discount (optional)</label>
-          <select class="select" id="orderDiscount" style="margin-bottom:16px">
-            <option value="">No discount</option>
-            ${applicableDiscounts.map(d => `<option value="${d.key}|${d.cost}|${d.label}">${d.label} — ${d.cost} coins</option>`).join('')}
-          </select>` : `<p class="muted" style="margin-bottom:16px;font-size:var(--text-sm)">You have ${coins} coins. Earn more in the Coins tab to unlock order discounts.</p>`}
-        <button class="btn btn-primary btn-block" id="confirmOrderBtn"><i class="fa-brands fa-discord"></i> PLACE ORDER</button>
+        <textarea class="textarea" id="orderAddress" rows="3" placeholder="House #, Street, Area, City" style="margin-bottom:20px"></textarea>
+        <button class="btn btn-primary btn-block" id="confirmOrderBtn" ${canAfford ? '' : 'disabled'}><i class="fa-brands fa-discord"></i> ${canAfford ? 'BUY WITH COINS' : 'NOT ENOUGH COINS'}</button>
       `,
     });
 
-    $('#confirmOrderBtn').addEventListener('click', async () => {
+    const confirmBtn = $('#confirmOrderBtn');
+    if (!canAfford) return;
+
+    confirmBtn.addEventListener('click', async () => {
       const address = $('#orderAddress').value.trim();
       if (!address) { toast('Add a delivery address', 'default', 'fa-triangle-exclamation'); return; }
 
-      const discountSel = $('#orderDiscount');
-      let discountPct = 0, coinsUsed = 0, discountLabel = '';
-      if (discountSel && discountSel.value) {
-        const [key, cost, label] = discountSel.value.split('|');
-        discountPct = key === 'discount_5' ? 5 : key === 'discount_10' ? 10 : key === 'discount_20' ? 20 : 0;
-        coinsUsed = parseInt(cost);
-        discountLabel = label;
-        const redeemRes = await BR.data.redeemReward(key, coinsUsed, label);
-        if (!redeemRes.ok) { toast('Could not apply discount', 'default', 'fa-triangle-exclamation'); return; }
-        await BR.auth.refreshProfile();
+      const res = await BR.data.buyProductWithCoins(product.id, address);
+      if (!res.ok) {
+        const msg = res.error === 'insufficient_coins' ? 'Not enough coins' : (res.error || 'Could not complete purchase');
+        toast(msg, 'default', 'fa-triangle-exclamation');
+        return;
       }
+      await BR.auth.refreshProfile();
 
-      await BR.data.createOrder({
-        productId: product.id, productName: product.name, price: product.price,
-        coinsUsed, discountPct, deliveryAddress: address,
-      });
-
-      const finalPrice = Math.round(product.price * (1 - discountPct / 100));
-      const text = `🛍️ **BLOOD REIGN ORDER**\nProduct: ${product.name}\nPrice: ${formatPKR(product.price)}${discountPct ? `\nDiscount: ${discountLabel} (${discountPct}% off)\nFinal: ${formatPKR(finalPrice)}` : ''}\nDelivery: ${address}`;
+      const text = `🛍️ **BLOOD REIGN ORDER**\nProduct: ${product.name}\nPaid: 🪙 ${price.toLocaleString()} coins\nDelivery: ${address}`;
       const sent = await sendDiscordWebhook(text);
       BR.ui.closeModal('orderModal');
-      toast(sent.ok ? "Order sent! We'll confirm on Discord" : 'Order saved! (Discord notify failed — we still got it)', sent.ok ? 'success' : 'default');
+      toast(sent.ok ? "Order placed! We'll confirm on Discord" : 'Order placed! (Discord notify failed — we still got it)', sent.ok ? 'success' : 'default');
+      document.dispatchEvent(new CustomEvent('br:data-refresh'));
     });
   }
 
