@@ -14,7 +14,11 @@ BR.shop = (function () {
     return `
     <div class="card card-hover product-card ${opts.compact ? 'compact' : ''}" data-product-id="${p.id}">
       <div class="product-thumb">
-        <i class="fa-solid fa-bag-shopping"></i>
+        ${p.image_url ? `
+          <img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="product-thumb-fallback" style="display:none"><i class="fa-solid fa-bag-shopping"></i></div>
+        ` : `<i class="fa-solid fa-bag-shopping"></i>`}
         ${p.tag ? `<span class="badge ${p.tag === 'HOT' ? 'badge-red' : 'badge-green'} product-tag">${p.tag}</span>` : ''}
       </div>
       <div class="product-brand">${escapeHtml(p.brand)}</div>
