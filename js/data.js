@@ -223,8 +223,15 @@ BR.data = (function () {
 
   async function adminDeleteTournament(id) {
     if (BR.isConfigured) {
-      const { error } = await BR.sb.from('tournaments').delete().eq('id', id);
-      return error ? { ok: false, error: error.message } : { ok: true };
+      // .select() forces Supabase to return the deleted row(s). If RLS
+      // silently blocks the delete (e.g. is_admin isn't set), no error is
+      // thrown but zero rows come back — that's the real failure signal.
+      const { data, error } = await BR.sb.from('tournaments').delete().eq('id', id).select();
+      if (error) return { ok: false, error: error.message };
+      if (!data || data.length === 0) {
+        return { ok: false, error: 'Nothing deleted — your account may not have is_admin set in Supabase.' };
+      }
+      return { ok: true };
     }
     const local = _adminLocal();
     local.deletedTournamentIds.push(id);
