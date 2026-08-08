@@ -57,64 +57,6 @@ BR.data = (function () {
     return false;
   }
 
-  // Returns { mode: 'SOLO'|'DUO'|'SQUAD', players: [{username, ff_uid}], teams: [{name, tag, roster}] }
-  // so a tournament card can show everyone who has joined so far — not just "you".
-  async function getTournamentParticipants(tournament) {
-    if (BR.isConfigured) {
-      if (tournament.mode === 'SOLO') {
-        const { data, error } = await BR.sb
-          .from('tournament_registrations').select('username, ff_uid, created_at')
-          .eq('tournament_id', tournament.id).order('created_at', { ascending: true });
-        if (error) { console.error(error); return { mode: tournament.mode, players: [], teams: [] }; }
-        return { mode: tournament.mode, players: data, teams: [] };
-      }
-      const { data, error } = await BR.sb
-        .from('tournament_team_registrations').select('roster_snapshot, created_at, teams(name, tag, region)')
-        .eq('tournament_id', tournament.id).order('created_at', { ascending: true });
-      if (error) { console.error(error); return { mode: tournament.mode, players: [], teams: [] }; }
-      return { mode: tournament.mode, players: [], teams: data.map(r => ({ name: r.teams?.name, tag: r.teams?.tag, region: r.teams?.region, roster: r.roster_snapshot || [] })) };
-    }
-
-    // Demo mode: seed data + whatever the current guest/local team has registered
-    const seed = BR.mockData.tournamentParticipants?.[tournament.id] || { players: [], teams: [] };
-    const players = [...(seed.players || [])];
-    const teams = [...(seed.teams || [])];
-
-    if (tournament.mode === 'SOLO') {
-      if (BR.guestStore.isRegistered(tournament.id)) {
-        const g = BR.guestStore.get();
-        if (g.username && !players.some(p => p.username === g.username)) players.push({ username: g.username, ff_uid: g.ff_uid });
-      }
-    } else {
-      if (BR.teamStore.isRegisteredForTournament(tournament.id)) {
-        const t = BR.teamStore.getMyTeam();
-        if (t && !teams.some(x => x.tag === t.tag)) {
-          teams.push({ name: t.name, tag: t.tag, region: t.region, roster: t.members.map(m => ({ ign: m.ign, role: m.role })) });
-        }
-      }
-    }
-    return { mode: tournament.mode, players, teams };
-  }
-
-  // ---------------------------------------------------------
-  // ALL TEAMS (public directory — used by Scrims/Tryouts "Browse Teams")
-  // ---------------------------------------------------------
-  async function getAllTeams() {
-    if (BR.isConfigured) {
-      const { data, error } = await BR.sb
-        .from('teams').select('*, team_members(ign, role, is_captain)')
-        .order('created_at', { ascending: false });
-      if (error) { console.error(error); return []; }
-      return data.map(t => ({ ...t, members: t.team_members || [] }));
-    }
-    const local = BR.teamStore.getMyTeam();
-    const seeded = BR.mockData.teams.map(t => ({ ...t }));
-    if (local && !seeded.some(t => t.tag === local.tag)) {
-      seeded.unshift({ id: local.id, name: local.name, tag: local.tag, region: local.region, members: local.members.map(m => ({ ign: m.ign, role: m.role })) });
-    }
-    return seeded;
-  }
-
   // ---------------------------------------------------------
   // PRODUCTS
   // ---------------------------------------------------------
@@ -298,6 +240,49 @@ BR.data = (function () {
     }
     const local = _adminLocal();
     local.winnerOverrides[tournamentId] = username;
+    _saveAdminLocal(local);
+    return { ok: true };
+  }
+
+  // Returns everyone registered for a tournament (SOLO registrants, or
+  // DUO/SQUAD roster members via the frozen roster snapshot) so the admin
+  // can enter each player's kills before marking it complete.
+  async function adminGetTournamentParticipants(tournamentId) {
+    if (BR.isConfigured) {
+      const { data, error } = await BR.sb.rpc('admin_get_tournament_participants', { p_tournament_id: tournamentId });
+      if (error) return { ok: false, error: error.message, participants: [] };
+      return data;
+    }
+    // Local/demo mode has no shared backend, so other players' registrations
+    // aren't visible here — the admin UI falls back to manual name entry.
+    return { ok: true, participants: [] };
+  }
+
+  // Adds each participant's kills to their total_kills, sets the winner
+  // (+1 win, +100 coins), and marks the tournament COMPLETED.
+  // results: [{ profile_id, username, kills }]
+  async function adminCompleteTournament(tournamentId, results, winner) {
+    if (BR.isConfigured) {
+      const { data, error } = await BR.sb.rpc('admin_complete_tournament', {
+        p_tournament_id: tournamentId,
+        p_results: results.map(r => ({ profile_id: r.profile_id || null, kills: r.kills || 0 })),
+        p_winner_profile_id: winner?.profile_id || null,
+        p_winner_username: winner?.profile_id ? null : (winner?.username || null),
+      });
+      if (error) return { ok: false, error: error.message };
+      return data;
+    }
+    // Demo mode: no cross-user profiles to update, but if the current guest
+    // is one of the listed participants, credit their own kills locally.
+    const me = BR.auth.getProfile();
+    const mine = results.find(r => me && r.username && r.username === me.username);
+    if (mine && mine.kills) {
+      const st = BR.guestStore.get();
+      st.total_kills = (st.total_kills || 0) + mine.kills;
+      BR.guestStore.save(st);
+    }
+    const local = _adminLocal();
+    if (winner?.username) local.winnerOverrides[tournamentId] = winner.username;
     _saveAdminLocal(local);
     return { ok: true };
   }
@@ -504,11 +489,12 @@ BR.data = (function () {
   }
 
   return {
-    getTournaments, registerForTournament, isRegistered, getTournamentParticipants, getAllTeams,
+    getTournaments, registerForTournament, isRegistered,
     getProducts, getAnnouncements, publishAnnouncement, getLeaderboard,
     watchAd, claimDailyLogin, earnShareBonus, redeemReward, getCoinTransactions,
     createOrder, getOrders, updateOrderStatus,
     adminCreateTournament, adminDeleteTournament, adminSetWinner,
+    adminGetTournamentParticipants, adminCompleteTournament,
     adminGrantCoins, getCoinGrantLog, getAnalytics,
     getMyTeam, createTeam, addTeamMember, removeTeamMember, registerTeamForTournament, isTeamRegistered,
     getOpenTryouts, createTryout, closeTryout, applyToTryout, getMyTeamApplications, respondToTryout,
