@@ -15,9 +15,9 @@ BR.config = {
   // Discord Server Settings > Integrations > Webhooks > New Webhook > Copy URL
   DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1535228730304364544/InB26aL6yi9Aqh6IscIN9ldPyXkagkf9qRmng49gImfl6MdqM1gPmo0UyQyVAokq4p5O',
   // Your Discord server invite, e.g. https://discord.gg/yourinvite — used for the support button
-  DISCORD_INVITE_URL: 'https://discord.gg/YOUR_INVITE_CODE',
+  DISCORD_INVITE_URL: 'https://discord.gg/pyFuG2kxe',
 
-  ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026', // front-end gate only; real security = is_admin flag + RLS
+  ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026BR', // front-end gate only; real security = is_admin flag + RLS
 
   VIP_TIERS: [
     { key: 'bronze',  label: 'Bronze',  min: 0,    max: 499,  icon: 'fa-shield-halved', color: '#8a8a9a' },
