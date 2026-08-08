@@ -1,0 +1,49 @@
+/* ==========================================================
+   BLOOD REIGN — Responsive fine-tuning
+   Base styles elsewhere are mobile-first (360px baseline).
+   This file only holds breakpoint-specific overrides that don't
+   belong in layout.css.
+   ========================================================== */
+
+/* ---- Very small phones (<=360px) ---- */
+@media (max-width: 360px) {
+  :root { --container-px: 12px; }
+  .hero-title { font-size: 2.4rem !important; }
+  .btn { padding: 0.65rem 1rem; font-size: 0.8rem; }
+}
+
+/* ---- Small phones -> large phones ---- */
+@media (min-width: 480px) {
+  .hero-title { font-size: 3rem; }
+}
+
+/* ---- Tablet ---- */
+@media (min-width: 768px) {
+  .hero-title { font-size: 3.6rem; }
+  .hero-actions { flex-direction: row !important; max-width: 480px; }
+  .modal-sheet { padding: var(--space-8); }
+}
+
+/* ---- Desktop / Web view ---- */
+@media (min-width: 1024px) {
+  .hero-title { font-size: 4.5rem; }
+  .hero-section { padding-block: var(--space-16); }
+  .container { padding-inline: var(--space-8); }
+  .hero-subtitle { max-width: 56ch; }
+}
+
+/* ---- Large desktop ---- */
+@media (min-width: 1440px) {
+  :root { --content-max: 1360px; }
+}
+
+/* ---- Landscape phones: keep bottom nav from eating the viewport ---- */
+@media (max-height: 480px) and (orientation: landscape) {
+  :root { --bottom-nav-h: 54px; --header-h: 52px; }
+  .nav-tab { font-size: 9px; }
+}
+
+/* ---- Print (rare, but cheap to support) ---- */
+@media print {
+  .bottom-nav, .site-header, .toast-stack { display: none !important; }
+}
