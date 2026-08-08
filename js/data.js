@@ -196,6 +196,42 @@ BR.data = (function () {
     return _adminLocal().orders;
   }
 
+  // Buys a product entirely with coins — the shop's currency. Deducts
+  // coin_price from the buyer's balance (server-side in Supabase mode so
+  // it can't be forged) and records the order.
+  async function buyProductWithCoins(productId, deliveryAddress) {
+    if (BR.isConfigured) {
+      const { data, error } = await BR.sb.rpc('buy_product_with_coins', {
+        p_product_id: productId, p_delivery_address: deliveryAddress,
+      });
+      if (error) return { ok: false, error: error.message };
+      return data;
+    }
+    const product = BR.mockData.products.find(p => p.id === productId);
+    if (!product) return { ok: false, error: 'product_not_found' };
+    const guest = BR.guestStore.get();
+    const balance = guest.coins || 0;
+    if (balance < (product.coin_price || 0)) {
+      return { ok: false, error: 'insufficient_coins', balance, need: product.coin_price };
+    }
+    guest.coins = balance - product.coin_price;
+    guest.transactions = guest.transactions || [];
+    guest.transactions.unshift({
+      amount: -product.coin_price, reason: `Bought: ${product.name}`,
+      balance_after: guest.coins, created_at: new Date().toISOString(),
+    });
+    BR.guestStore.save(guest);
+
+    const local = _adminLocal();
+    local.orders.unshift({
+      id: 'o' + Date.now(), status: 'pending', created_at: new Date().toISOString(),
+      product_id: productId, product_name: product.name, price: 0,
+      coins_used: product.coin_price, discount_pct: 0, delivery_address: deliveryAddress,
+    });
+    _saveAdminLocal(local);
+    return { ok: true, coins: guest.coins };
+  }
+
   async function updateOrderStatus(orderId, status) {
     if (BR.isConfigured) {
       const { error } = await BR.sb.from('orders').update({ status }).eq('id', orderId);
@@ -320,7 +356,7 @@ BR.data = (function () {
     const [tournaments, orders, leaderboard] = await Promise.all([getTournaments(), getOrders(), getLeaderboard()]);
     const weekAgo = Date.now() - 7 * 86400000;
     const ordersThisWeek = orders.filter(o => new Date(o.created_at).getTime() >= weekAgo);
-    const revenueThisWeek = ordersThisWeek.reduce((sum, o) => sum + Number(o.price) * (1 - (o.discount_pct || 0) / 100), 0);
+    const coinsSpentThisWeek = ordersThisWeek.reduce((sum, o) => sum + (Number(o.coins_used) || 0), 0);
 
     const productCounts = {};
     orders.forEach(o => { productCounts[o.product_name] = (productCounts[o.product_name] || 0) + 1; });
@@ -333,7 +369,7 @@ BR.data = (function () {
       totalTournaments: tournaments.length,
       liveTournaments: tournaments.filter(t => t.status === 'LIVE').length,
       totalOrders: orders.length,
-      revenueThisWeek,
+      coinsSpentThisWeek,
       topProduct: topProduct ? { name: topProduct[0], count: topProduct[1] } : null,
       mostJoinedTournament: mostJoined || null,
     };
@@ -499,7 +535,7 @@ BR.data = (function () {
     getTournaments, registerForTournament, isRegistered,
     getProducts, getAnnouncements, publishAnnouncement, getLeaderboard,
     watchAd, claimDailyLogin, earnShareBonus, redeemReward, getCoinTransactions,
-    createOrder, getOrders, updateOrderStatus,
+    createOrder, getOrders, updateOrderStatus, buyProductWithCoins,
     adminCreateTournament, adminDeleteTournament, adminSetWinner,
     adminGetTournamentParticipants, adminCompleteTournament,
     adminGrantCoins, getCoinGrantLog, getAnalytics,
