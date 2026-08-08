@@ -81,7 +81,11 @@ BR.admin = (function () {
     }));
     $$('[data-delete-tournament]', el).forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm('Delete this tournament?')) return;
-      await BR.data.adminDeleteTournament(btn.dataset.deleteTournament);
+      const res = await BR.data.adminDeleteTournament(btn.dataset.deleteTournament);
+      if (res && res.ok === false) {
+        toast(res.error || 'Delete failed — check you have is_admin set in Supabase', 'default', 'fa-triangle-exclamation');
+        return;
+      }
       renderTournamentManager();
     }));
   }
