@@ -85,6 +85,8 @@
   position: relative;
 }
 .product-thumb i { font-size: 2rem; color: var(--steel); }
+.product-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius); }
+.product-thumb-fallback { width: 100%; height: 100%; align-items: center; justify-content: center; }
 .product-tag { position: absolute; top: 8px; left: 8px; }
 .product-brand { font-size: var(--text-xs); color: var(--accent-bright); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
 .product-name { font-size: var(--text-sm); margin-block: 4px 6px; min-height: 2.4em; }
