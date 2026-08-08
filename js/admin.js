@@ -56,7 +56,7 @@ BR.admin = (function () {
       { icon: 'fa-trophy', label: 'Tournaments', value: stats.totalTournaments },
       { icon: 'fa-circle', label: 'Live Now', value: stats.liveTournaments },
       { icon: 'fa-bag-shopping', label: 'Total Orders', value: stats.totalOrders },
-      { icon: 'fa-coins', label: 'Coins Spent (7d)', value: `🪙 ${Math.round(stats.coinsSpentThisWeek).toLocaleString()}` },
+      { icon: 'fa-sack-dollar', label: 'Revenue (7d)', value: formatPKR(Math.round(stats.revenueThisWeek)) },
       { icon: 'fa-star', label: 'Top Product', value: stats.topProduct ? stats.topProduct.name : '—' },
     ];
     el.innerHTML = cards.map(c => `<div class="card stat-card"><i class="fa-solid ${c.icon}"></i><div class="stat-value" style="font-size:var(--text-lg)">${c.value}</div><div class="muted stat-label">${c.label}</div></div>`).join('');
@@ -212,7 +212,7 @@ BR.admin = (function () {
     if (!orders.length) { el.innerHTML = `<div class="empty-state"><p>No orders yet.</p></div>`; return; }
     el.innerHTML = orders.map(o => `
       <div class="card admin-row">
-        <div><strong>${escapeHtml(o.product_name)}</strong><span class="muted"> — 🪙 ${(o.coins_used || 0).toLocaleString()}</span>
+        <div><strong>${escapeHtml(o.product_name)}</strong><span class="muted"> — ${formatPKR(o.price)}${o.discount_pct ? ` (${o.discount_pct}% off)` : ''}</span>
           <div class="muted" style="font-size:var(--text-xs)">${escapeHtml(o.delivery_address || 'No address')}</div>
         </div>
         <select class="select" data-order-status="${o.id}" style="width:auto">
