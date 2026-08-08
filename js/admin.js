@@ -70,23 +70,112 @@ BR.admin = (function () {
       <div class="card admin-row">
         <div><strong>${escapeHtml(t.name)}</strong><span class="muted"> — ${t.mode} · ${t.status}</span></div>
         <div class="admin-row-actions">
-          ${t.status !== 'COMPLETED' ? `<button class="btn btn-sm btn-outline" data-set-winner="${t.id}">Set Winner</button>` : ''}
+          ${t.status !== 'COMPLETED' ? `<button class="btn btn-sm btn-outline" data-complete-tournament="${t.id}">Complete Tournament</button>` : ''}
           <button class="btn btn-sm btn-ghost" data-delete-tournament="${t.id}"><i class="fa-solid fa-trash"></i></button>
         </div>
       </div>`).join('');
 
-    $$('[data-set-winner]', el).forEach(btn => btn.addEventListener('click', async () => {
-      const username = prompt('Winner username:');
-      if (!username) return;
-      const res = await BR.data.adminSetWinner(btn.dataset.setWinner, username.trim());
-      if (res.ok) { toast('Winner set — +100 coins granted', 'success'); renderTournamentManager(); renderDashboard(); }
-      else toast(res.error || 'Failed', 'default', 'fa-triangle-exclamation');
+    $$('[data-complete-tournament]', el).forEach(btn => btn.addEventListener('click', () => {
+      const t = tournaments.find(x => x.id === btn.dataset.completeTournament);
+      if (t) openCompleteTournamentModal(t);
     }));
     $$('[data-delete-tournament]', el).forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm('Delete this tournament?')) return;
       await BR.data.adminDeleteTournament(btn.dataset.deleteTournament);
       renderTournamentManager();
     }));
+  }
+
+  async function openCompleteTournamentModal(t) {
+    const res = await BR.data.adminGetTournamentParticipants(t.id);
+    const participants = res.participants || [];
+
+    const rowsHTML = participants.length
+      ? participants.map((p, i) => `
+          <div class="admin-row" style="align-items:center;gap:10px" data-kill-row data-idx="${i}">
+            <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer">
+              <input type="radio" name="winnerPick" value="p-${i}">
+              <span>${escapeHtml(p.username || p.ign)}${p.team_name ? ` <span class="muted">(${escapeHtml(p.team_name)})</span>` : ''}</span>
+            </label>
+            <input class="input" type="number" min="0" placeholder="Kills" data-kills-input value="0" style="width:90px">
+          </div>`).join('')
+      : `<p class="muted" style="margin-bottom:10px;font-size:var(--text-sm)">No registrations found here (demo mode has no shared data across users) — add players manually below.</p>`;
+
+    BR.ui.openModal('completeTournamentModal', {
+      title: `Complete — ${escapeHtml(t.name)}`,
+      bodyHTML: `
+        <p class="muted" style="margin-bottom:14px;font-size:var(--text-sm)">Enter each player's kills, then select the winner. Kills add to their profile total; the winner gets +1 win and +100 coins.</p>
+        <div id="killRowsContainer" style="margin-bottom:14px">${rowsHTML}</div>
+        ${!participants.length ? `
+          <div class="admin-form-grid" style="margin-bottom:10px">
+            <input class="input" id="manualUsername" placeholder="Username">
+            <input class="input" id="manualKills" type="number" min="0" placeholder="Kills" value="0">
+          </div>
+          <button class="btn btn-sm btn-outline btn-block" id="addManualRowBtn" style="margin-bottom:16px">+ Add Player</button>
+          <label class="field-label">Winner Username</label>
+          <input class="input" id="manualWinner" placeholder="Type winner's username" style="margin-bottom:16px">
+        ` : ''}
+        <button class="btn btn-primary btn-block" id="saveCompleteBtn"><i class="fa-solid fa-flag-checkered"></i> Save &amp; Complete</button>
+      `,
+    });
+
+    const manualRows = [];
+    const addBtn = $('#addManualRowBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const uname = $('#manualUsername').value.trim();
+        const kills = parseInt($('#manualKills').value) || 0;
+        if (!uname) { toast('Enter a username', 'default', 'fa-triangle-exclamation'); return; }
+        manualRows.push({ username: uname, kills });
+        const container = $('#killRowsContainer');
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+        row.style.cssText = 'align-items:center;gap:10px';
+        row.innerHTML = `<label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer"><input type="radio" name="winnerPick" value="m-${manualRows.length - 1}"><span>${escapeHtml(uname)}</span></label><span class="muted">${kills} kills</span>`;
+        container.appendChild(row);
+        $('#manualUsername').value = '';
+        $('#manualKills').value = '0';
+      });
+    }
+
+    $('#saveCompleteBtn').addEventListener('click', async () => {
+      let results = [];
+      let winner = null;
+      const winnerRadio = document.querySelector('input[name=winnerPick]:checked');
+
+      if (participants.length) {
+        $$('[data-kill-row]').forEach((row) => {
+          const idx = parseInt(row.dataset.idx);
+          const kills = parseInt(row.querySelector('[data-kills-input]').value) || 0;
+          const p = participants[idx];
+          results.push({ profile_id: p.profile_id, username: p.username, kills });
+        });
+        if (winnerRadio && winnerRadio.value.startsWith('p-')) {
+          const p = participants[parseInt(winnerRadio.value.split('-')[1])];
+          winner = { profile_id: p.profile_id, username: p.username };
+        }
+      } else {
+        results = manualRows;
+        if (winnerRadio && winnerRadio.value.startsWith('m-')) {
+          winner = { username: manualRows[parseInt(winnerRadio.value.split('-')[1])]?.username };
+        }
+      }
+      const manualWinnerInput = $('#manualWinner');
+      if (!winner && manualWinnerInput && manualWinnerInput.value.trim()) {
+        winner = { username: manualWinnerInput.value.trim() };
+      }
+
+      if (!winner || !winner.username) { toast('Pick a winner (or type one manually)', 'default', 'fa-triangle-exclamation'); return; }
+
+      const saveRes = await BR.data.adminCompleteTournament(t.id, results, winner);
+      if (saveRes.ok) {
+        BR.ui.closeModal('completeTournamentModal');
+        toast('Tournament completed — kills & winner saved', 'success');
+        renderTournamentManager(); renderDashboard();
+      } else {
+        toast(saveRes.error || 'Failed', 'default', 'fa-triangle-exclamation');
+      }
+    });
   }
 
   function wireCreateTournamentForm() {
