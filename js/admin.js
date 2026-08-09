@@ -285,7 +285,7 @@ BR.admin = (function () {
 
   // Shared "search registered players" widget used by both the direct-add
   // and schedule-tryout tools. Returns a getter for whatever's selected.
-  function wirePlayerSearchWidget(searchId, resultsId) {
+  function wirePlayerSearchWidget(searchId, resultsId, onSelect) {
     const searchInput = $('#' + searchId);
     const resultsEl = $('#' + resultsId);
     let selected = null;
@@ -302,9 +302,10 @@ BR.admin = (function () {
                     </button>`;
           }).join('')
         : `<p class="muted" style="font-size:var(--text-xs)">No matching registered players.</p>`;
-      $$('[data-pick-profile]', resultsEl).forEach(b => b.addEventListener('click', () => {
+      $$('[data-pick-profile]', resultsEl).forEach(b => b.addEventListener('click', async () => {
         selected = { id: b.dataset.pickProfile, username: b.dataset.username };
         resultsEl.innerHTML = `<span class="badge badge-green">Selected: ${escapeHtml(selected.username)}</span>`;
+        if (onSelect) await onSelect(selected);
       }));
     });
     return {
@@ -313,11 +314,14 @@ BR.admin = (function () {
     };
   }
 
-  async function fillTeamSelect(selectId) {
+  async function fillTeamSelect(selectId, excludeTeamIds = []) {
     const teams = await BR.data.adminGetAllTeams();
     const sel = $('#' + selectId);
-    sel.innerHTML = teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)} [${escapeHtml(t.tag)}]</option>`).join('')
-      || `<option value="">No teams yet</option>`;
+    if (!sel) return;
+    const filtered = teams.filter(t => !excludeTeamIds.includes(t.id));
+    sel.innerHTML = filtered.length
+      ? filtered.map(t => `<option value="${t.id}">${escapeHtml(t.name)} [${escapeHtml(t.tag)}]</option>`).join('')
+      : `<option value="">${teams.length ? "Player is already in every team" : 'No teams yet — create one in the Teams tab first'}</option>`;
   }
 
   function wireAddPlayerToTeamForm() {
@@ -325,7 +329,10 @@ BR.admin = (function () {
     if (!btn || btn.dataset.wired) return;
     btn.dataset.wired = '1';
 
-    const player = wirePlayerSearchWidget('addPlayerSearch', 'addPlayerResults');
+    const player = wirePlayerSearchWidget('addPlayerSearch', 'addPlayerResults', async (selected) => {
+      const excludeIds = await BR.data.adminGetPlayerTeamIds(selected.id);
+      fillTeamSelect('addPlayerTeam', excludeIds);
+    });
     fillTeamSelect('addPlayerTeam');
 
     btn.addEventListener('click', async () => {
