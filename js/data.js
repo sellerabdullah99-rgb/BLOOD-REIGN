@@ -57,6 +57,49 @@ BR.data = (function () {
     return false;
   }
 
+  // Returns { [tournamentId]: { type: 'solo'|'team', label } } for every
+  // tournament the current user (solo) or their team has already joined —
+  // used to show "already registered" and stop a second join.
+  async function getMyRegistrations() {
+    const result = {};
+    if (BR.isConfigured) {
+      const { data: userData } = await BR.sb.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return result;
+
+      const { data: solo } = await BR.sb.from('tournament_registrations')
+        .select('tournament_id, username').eq('user_id', uid);
+      (solo || []).forEach(r => { result[r.tournament_id] = { type: 'solo', label: `You're in as ${r.username}` }; });
+
+      const { data: memberships } = await BR.sb.from('team_members').select('team_id').eq('profile_id', uid);
+      const teamIds = [...new Set((memberships || []).map(m => m.team_id))];
+      if (teamIds.length) {
+        const { data: teamRegs } = await BR.sb.from('tournament_team_registrations')
+          .select('tournament_id, teams(name)').in('team_id', teamIds);
+        (teamRegs || []).forEach(r => {
+          result[r.tournament_id] = { type: 'team', label: `${r.teams?.name || 'Your team'} is registered` };
+        });
+      }
+      return result;
+    }
+    // Demo/local mode
+    const guest = BR.guestStore.get();
+    (guest.registrations || []).forEach(id => {
+      result[id] = { type: 'solo', label: `You're in as ${guest.username || 'Guest Warrior'}` };
+    });
+    const myTeam = BR.teamStore.getMyTeam();
+    if (myTeam) {
+      const local = _adminLocal();
+      const allIds = [...BR.mockData.tournaments, ...local.addedTournaments].map(t => t.id);
+      allIds.forEach(id => {
+        if (BR.teamStore.isRegisteredForTournament(id)) {
+          result[id] = { type: 'team', label: `${myTeam.name} is registered` };
+        }
+      });
+    }
+    return result;
+  }
+
   // ---------------------------------------------------------
   // PRODUCTS
   // ---------------------------------------------------------
@@ -496,7 +539,7 @@ BR.data = (function () {
   }
 
   return {
-    getTournaments, registerForTournament, isRegistered,
+    getTournaments, registerForTournament, isRegistered, getMyRegistrations,
     getProducts, getAnnouncements, publishAnnouncement, getLeaderboard,
     watchAd, claimDailyLogin, earnShareBonus, redeemReward, getCoinTransactions,
     createOrder, getOrders, updateOrderStatus,

@@ -21,6 +21,7 @@ BR.home = (function () {
     const el = $('#featuredTournament');
     if (!el) return;
     if (!tournament) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-trophy"></i><h3>No live tournament right now</h3><p>Check the Tournaments tab for upcoming ones.</p></div>'; return; }
+    const reg = BR.tournaments.getMyRegistration ? BR.tournaments.getMyRegistration(tournament.id) : null;
     el.innerHTML = `
       <div class="card card-glow featured-card">
         <div class="featured-top">
@@ -33,11 +34,15 @@ BR.home = (function () {
           <span class="muted"><i class="fa-solid fa-map-location-dot"></i> ${escapeHtml(tournament.map)}</span>
         </div>
         <div class="featured-prize">💎 ${escapeHtml(tournament.prize_label)}</div>
-        <button class="btn btn-primary btn-block" data-join-tournament="${tournament.id}">
-          <i class="fa-brands fa-discord"></i> JOIN NOW
-        </button>
+        ${reg
+          ? `<div class="tc-registered"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(reg.label)}</div>
+             <button class="btn btn-outline btn-block" disabled><i class="fa-solid fa-lock"></i> ALREADY REGISTERED</button>`
+          : `<button class="btn btn-primary btn-block" data-join-tournament="${tournament.id}">
+              <i class="fa-brands fa-discord"></i> JOIN NOW
+            </button>`}
       </div>`;
-    el.querySelector('[data-join-tournament]').addEventListener('click', () => BR.tournaments.openJoinModal(tournament));
+    const joinBtn = el.querySelector('[data-join-tournament]');
+    if (joinBtn) joinBtn.addEventListener('click', () => BR.tournaments.openJoinModal(tournament));
   }
 
   function renderTodaysTournaments(list) {
@@ -85,6 +90,7 @@ BR.home = (function () {
     clearTimers();
     const [tournaments, products, announcements, leaderboard] = await Promise.all([
       BR.data.getTournaments(), BR.data.getProducts(), BR.data.getAnnouncements(), BR.data.getLeaderboard(),
+      BR.tournaments.refreshMyRegistrations(),
     ]);
 
     const live = tournaments.filter(t => t.status === 'LIVE');
