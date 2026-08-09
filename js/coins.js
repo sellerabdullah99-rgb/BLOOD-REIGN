@@ -48,19 +48,60 @@ BR.coins = (function () {
   }
 
   async function handleEarn(key, anchorEl) {
-    let res;
     if (key === 'ad') {
-      toast('Playing sponsor ad…', 'default', 'fa-play');
-      await new Promise(r => setTimeout(r, 1200)); // simulated ad watch
-      res = await BR.data.watchAd();
+      return handleWatchAd(anchorEl);
     } else if (key === 'daily') {
-      res = await BR.data.claimDailyLogin();
+      const res = await BR.data.claimDailyLogin();
+      handleEarnResult(res, 5, anchorEl);
     } else if (key === 'share') {
       const text = '🔥 Check out BLOOD REIGN tournaments — free entry, real prizes!';
       try { await navigator.clipboard.writeText(text); toast('Copied! Paste it in a Discord server 👇', 'default', 'fa-copy'); } catch (_) {}
       window.open(BR.utils.discordInviteLink(), '_blank');
-      res = await BR.data.earnShareBonus();
+      const res = await BR.data.earnShareBonus();
+      handleEarnResult(res, 15, anchorEl);
     }
+  }
+
+  // Opens the real Adsterra ad in a new tab, then requires a short wait
+  // before coins can be claimed — Direct Links can't confirm the ad was
+  // actually watched, so this at least stops an instant no-look claim.
+  function handleWatchAd(anchorEl) {
+    const link = BR.config.ADSTERRA_DIRECT_LINK;
+    if (!link || link.includes('YOUR-ADSTERRA')) {
+      toast('Ad network not connected yet — add your Adsterra link in config.js', 'default', 'fa-triangle-exclamation');
+      return;
+    }
+    window.open(link, '_blank');
+
+    const original = anchorEl.innerHTML;
+    anchorEl.style.pointerEvents = 'none';
+    let secondsLeft = 15;
+    const amountEl = anchorEl.querySelector('.earn-amount');
+    if (amountEl) amountEl.textContent = `Wait ${secondsLeft}s…`;
+
+    const tick = setInterval(() => {
+      secondsLeft -= 1;
+      if (amountEl) amountEl.textContent = secondsLeft > 0 ? `Wait ${secondsLeft}s…` : 'Claim now';
+      if (secondsLeft <= 0) {
+        clearInterval(tick);
+        anchorEl.style.pointerEvents = '';
+        anchorEl.dataset.earn = 'ad_claim';
+        const newBtn = anchorEl.cloneNode(true);
+        anchorEl.replaceWith(newBtn);
+        newBtn.addEventListener('click', async () => {
+          newBtn.style.pointerEvents = 'none';
+          const res = await BR.data.watchAd();
+          await handleEarnResult(res, 10, newBtn);
+          newBtn.innerHTML = original;
+          newBtn.dataset.earn = 'ad';
+          newBtn.style.pointerEvents = '';
+          newBtn.addEventListener('click', () => handleEarn('ad', newBtn));
+        });
+      }
+    }, 1000);
+  }
+
+  async function handleEarnResult(res, amount, anchorEl) {
     if (!res.ok) {
       const msg = res.error === 'daily_limit_reached' ? 'Daily ad limit reached — come back tomorrow'
         : res.error === 'already_claimed' ? 'Already claimed today ✅'
@@ -68,7 +109,7 @@ BR.coins = (function () {
       toast(msg, 'default', 'fa-circle-info');
       return;
     }
-    floatCoins(res.coins !== undefined ? (key === 'ad' ? 10 : key === 'daily' ? 5 : 15) : 0, anchorEl);
+    if (amount && anchorEl) floatCoins(amount, anchorEl);
     toast('Coins added!', 'success');
     await BR.auth.refreshProfile();
   }
