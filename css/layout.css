@@ -1,0 +1,192 @@
+/* ==========================================================
+   BLOOD REIGN — Layout
+   Mobile: sticky header + bottom tab bar (app-like)
+   Desktop (>=1024px): sticky header with inline nav, no bottom bar
+   ========================================================== */
+
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--container-px);
+  background: rgba(13, 13, 26, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--accent);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: 3px;
+  color: var(--text-primary);
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+.brand i { color: var(--accent-bright); }
+
+.header-right { display: flex; align-items: center; gap: var(--space-4); }
+
+.coin-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid #c9a84c44;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  color: var(--gold);
+  font-size: var(--text-sm);
+}
+
+.bell-btn { position: relative; padding: 6px; color: var(--text-secondary); }
+.bell-btn:hover { color: var(--text-primary); }
+.bell-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-bright);
+  box-shadow: 0 0 6px var(--accent-bright);
+}
+
+/* Desktop inline nav (hidden on mobile) */
+.header-nav { display: none; }
+
+/* ---------- Bottom tab nav (mobile / tablet) ---------- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 100;
+  height: var(--bottom-nav-h);
+  display: flex;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--accent);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--steel);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  position: relative;
+  transition: color var(--duration-fast) var(--ease);
+}
+.nav-tab i { font-size: 1.15rem; }
+.nav-tab.active { color: var(--text-primary); }
+.nav-tab.active::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 25%; right: 25%;
+  height: 2px;
+  background: var(--accent-bright);
+  box-shadow: 0 0 8px var(--accent-bright);
+}
+
+/* ---------- Main content ---------- */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+main {
+  flex: 1;
+  padding-bottom: calc(var(--bottom-nav-h) + var(--space-8));
+}
+
+.section { padding-block: var(--space-6); }
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.section-head h2 {
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+}
+.section-head .see-all { font-size: var(--text-xs); color: var(--accent-bright); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-8) var(--container-px) calc(var(--bottom-nav-h) + var(--space-6));
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.site-footer .social-row { display: flex; justify-content: center; gap: var(--space-5); margin-block: var(--space-4); }
+.site-footer .social-row a { font-size: 1.3rem; color: var(--steel); transition: color var(--duration-fast); }
+.site-footer .social-row a:hover { color: var(--accent-bright); }
+.site-footer small { display: block; margin-top: var(--space-3); opacity: 0.6; cursor: default; }
+
+/* ---------- Grids ---------- */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+.grid-1 { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.profile-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+
+/* ==========================================================
+   DESKTOP / WEB VIEW  (>=1024px)
+   Bottom tab bar -> replaced by inline header nav + wider grids
+   ========================================================== */
+@media (min-width: 1024px) {
+  .bottom-nav { display: none; }
+  main { padding-bottom: var(--space-16); }
+
+  .header-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .header-nav .nav-tab {
+    flex: none;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+  }
+  .header-nav .nav-tab:hover { color: var(--text-primary); background: var(--card-bg); }
+  .header-nav .nav-tab.active { color: #fff; background: var(--accent); box-shadow: var(--shadow-glow-sm); }
+  .header-nav .nav-tab.active::before { display: none; }
+
+  .grid-2 { grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .stats-grid { gap: var(--space-4); }
+  .profile-stats-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+
+  .scroll-row { overflow: visible; flex-wrap: wrap; }
+  .scroll-row > * { flex-shrink: 1; }
+
+  .site-footer { padding-bottom: var(--space-8); }
+}
+
+@media (min-width: 1280px) {
+  .grid-2 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Tablet: 2 cols nav still bottom but wider product grid */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .grid-2 { grid-template-columns: repeat(3, 1fr); }
+}
