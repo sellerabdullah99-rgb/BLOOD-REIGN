@@ -9,6 +9,15 @@ BR.tournaments = (function () {
   let activeFilter = 'ALL';
   let allTournaments = [];
   let countdownInterval = null;
+  let myRegistrations = {};
+
+  async function refreshMyRegistrations() {
+    myRegistrations = await BR.data.getMyRegistrations();
+  }
+
+  function getMyRegistration(tournamentId) {
+    return myRegistrations[tournamentId] || null;
+  }
 
   function cardHTML(t, opts = {}) {
     const statusBadge = t.status === 'LIVE'
@@ -18,6 +27,7 @@ BR.tournaments = (function () {
         : `<span class="badge badge-steel">COMPLETED</span>`;
 
     const pct = Math.min(100, Math.round(((t.current_players || 0) / t.max_players) * 100));
+    const reg = myRegistrations[t.id];
 
     return `
     <div class="card card-hover tournament-card ${opts.compact ? 'compact' : ''}" data-tournament-id="${t.id}">
@@ -38,9 +48,12 @@ BR.tournaments = (function () {
             <span class="badge badge-green">✅ FREE ENTRY</span>
             <span class="tc-countdown" data-countdown="${t.start_time}">${countdownString(t.start_time)}</span>
           </div>
-          <button class="btn btn-primary btn-block" data-join-tournament="${t.id}">
-            <i class="fa-brands fa-discord"></i> JOIN NOW
-          </button>`
+          ${reg
+            ? `<div class="tc-registered"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(reg.label)}</div>
+               <button class="btn btn-outline btn-block" disabled><i class="fa-solid fa-lock"></i> ALREADY REGISTERED</button>`
+            : `<button class="btn btn-primary btn-block" data-join-tournament="${t.id}">
+                <i class="fa-brands fa-discord"></i> JOIN NOW
+              </button>`}`
       }
     </div>`;
   }
@@ -104,6 +117,10 @@ BR.tournaments = (function () {
   }
 
   function openJoinModal(tournament) {
+    if (myRegistrations[tournament.id]) {
+      toast("You're already registered for this tournament", 'default', 'fa-circle-check');
+      return;
+    }
     if (tournament.mode === 'SOLO') return openIndividualJoinModal(tournament);
     return openTeamJoinModal(tournament);
   }
@@ -127,7 +144,13 @@ BR.tournaments = (function () {
       if (!ffUid || !username) { toast('Enter your FF UID and username', 'default', 'fa-triangle-exclamation'); return; }
 
       const res = await BR.data.registerForTournament(tournament.id, ffUid, username);
-      if (!res.ok) { toast(res.error === 'tournament_full' ? 'This tournament is full' : 'Could not register — try again', 'default', 'fa-triangle-exclamation'); return; }
+      if (!res.ok) {
+        const msg = res.error === 'tournament_full' ? 'This tournament is full'
+          : res.error === 'already_registered' ? "You're already registered for this tournament"
+          : 'Could not register — try again';
+        toast(msg, 'default', 'fa-triangle-exclamation');
+        return;
+      }
 
       await BR.auth.updateProfileFields({ ff_uid: ffUid, username });
       const text = `🎮 **BLOOD REIGN TOURNAMENT JOIN**\nTournament: ${tournament.name}\nMode: ${tournament.mode}\nFF UID: ${ffUid}\nUsername: ${username}\nEntry: FREE ✅`;
@@ -186,6 +209,7 @@ BR.tournaments = (function () {
       if (!res.ok) {
         const msg = res.error === 'tournament_full' ? 'This tournament is full'
           : res.error === 'roster_too_small' ? `Need at least ${res.need || minNeeded} players`
+          : res.error === 'already_registered' ? 'Your team is already registered for this tournament'
           : 'Could not register — try again';
         toast(msg, 'default', 'fa-triangle-exclamation');
         return;
@@ -227,6 +251,7 @@ BR.tournaments = (function () {
   }
 
   async function render() {
+    await refreshMyRegistrations();
     allTournaments = await BR.data.getTournaments();
     renderSectionTabs();
     renderFilterTabs();
@@ -239,5 +264,5 @@ BR.tournaments = (function () {
     document.addEventListener('br:data-refresh', render);
   }
 
-  return { init, render, cardHTML, wireCardButtons, openJoinModal, showSection };
+  return { init, render, cardHTML, wireCardButtons, openJoinModal, showSection, refreshMyRegistrations, getMyRegistration };
 })();
