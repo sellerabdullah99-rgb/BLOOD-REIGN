@@ -582,9 +582,17 @@ BR.data = (function () {
   async function adminSearchProfiles(query) {
     if (!query || query.length < 2) return [];
     if (BR.isConfigured) {
-      const { data, error } = await BR.sb.from('profiles').select('id, username, ff_uid, last_active_at').ilike('username', `%${query}%`).limit(10);
-      if (error) { console.error(error); return []; }
-      return data;
+      let { data, error } = await BR.sb.from('profiles').select('id, username, ff_uid, last_active_at').ilike('username', `%${query}%`).limit(10);
+      if (error) {
+        // Most likely cause: last_active_at column doesn't exist yet
+        // because schema.sql wasn't re-run after it was added — fall back
+        // to a query without it so search still works either way.
+        console.error('adminSearchProfiles (with last_active_at) failed, retrying without it:', error.message);
+        const fallback = await BR.sb.from('profiles').select('id, username, ff_uid').ilike('username', `%${query}%`).limit(10);
+        data = fallback.data; error = fallback.error;
+        if (error) { console.error('adminSearchProfiles fallback also failed:', error.message); return []; }
+      }
+      return data || [];
     }
     const guest = BR.guestStore.get();
     return guest.username && guest.username.toLowerCase().includes(query.toLowerCase())
