@@ -601,6 +601,17 @@ BR.data = (function () {
     return t ? [{ id: t.id, name: t.name, tag: t.tag }] : [];
   }
 
+  // Team id(s) a given profile is already a member of — used to hide a
+  // player's current team from the "add to team" picker.
+  async function adminGetPlayerTeamIds(profileId) {
+    if (BR.isConfigured) {
+      const { data, error } = await BR.sb.from('team_members').select('team_id').eq('profile_id', profileId);
+      if (error) { console.error(error); return []; }
+      return data.map(r => r.team_id);
+    }
+    return [];
+  }
+
   async function updateTryoutStatus(tryoutId, status) {
     if (BR.isConfigured) {
       const { error } = await BR.sb.from('tryouts').update({ status }).eq('id', tryoutId);
@@ -647,6 +658,6 @@ BR.data = (function () {
     getMyTeam, createTeam, addTeamMember, removeTeamMember, registerTeamForTournament, isTeamRegistered,
     getOpenTryouts, createTryout, closeTryout, applyToTryout, getMyTeamApplications, respondToTryout,
     getUpcomingScrims, scheduleScrim, updateScrimStatus, deleteScrim,
-    adminGetAllTryouts, adminGetTryoutApplications, adminSearchProfiles, adminGetAllTeams, adminAddRegisteredPlayerToTeam, adminScheduleTryout, updateTryoutStatus,
+    adminGetAllTryouts, adminGetTryoutApplications, adminSearchProfiles, adminGetAllTeams, adminGetPlayerTeamIds, adminAddRegisteredPlayerToTeam, adminScheduleTryout, updateTryoutStatus,
   };
 })();
