@@ -419,6 +419,21 @@
   <script src="js/profile.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/main.js"></script>
+
+  <script>
+  // Adsterra popunder must be attached BEFORE the user clicks anything —
+  // it fires on the user's next click site-wide. Injecting it inside a
+  // button's click handler is too late (that click is already "used up"
+  // by the time the async script loads), so it's loaded here at page load.
+  (function () {
+    var src = window.BR && BR.config && BR.config.ADSTERRA_POPUNDER_SRC;
+    if (!src || src.indexOf('YOUR-') !== -1) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    document.body.appendChild(s);
+  })();
+</script>
 </body>
 
 </html>
