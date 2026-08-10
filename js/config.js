@@ -17,10 +17,9 @@ BR.config = {
   // Your Discord server invite, e.g. https://discord.gg/yourinvite — used for the support button
   DISCORD_INVITE_URL: 'https://discord.gg/YOUR_INVITE_CODE',
 
-
-   // Adsterra Dashboard > Websites > your site > Direct Link — paste it here.
-   // Real ad revenue: clicking "Watch Ad" opens this in a new tab.
-   ADSTERRA_DIRECT_LINK: 'https://www.effectivecpmnetwork.com/ep2yf74m?key=25e5e19e195994dd87ade18d6440981c',
+// Adsterra Dashboard > Websites > your site > Popunder > Get Code — the
+// <script src="..."> URL. Injected dynamically when "Watch Ad" is clicked.
+ADSTERRA_POPUNDER_SRC: 'https://pl30771246.effectivecpmnetwork.com/ed/72/90/ed7290c960883deca34b14423889ecce.js',
 
   ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026BR', // front-end gate only; real security = is_admin flag + RLS
 
