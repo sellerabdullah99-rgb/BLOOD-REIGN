@@ -65,23 +65,14 @@ BR.coins = (function () {
   // Opens the real Adsterra ad in a new tab, then requires a short wait
   // before coins can be claimed — Direct Links can't confirm the ad was
   // actually watched, so this at least stops an instant no-look claim.
-  // Injects the Adsterra popunder script — it auto-fires on the user's
-  // next click. Note: Adsterra frequency-caps popunders (usually once
-  // every several hours per browser), so it won't necessarily open every
-  // single time — that's the ad network's own anti-spam limit, not a bug.
-  function triggerPopunderAd() {
-    const src = BR.config.ADSTERRA_POPUNDER_SRC;
-    if (!src || src.includes('YOUR-')) return false;
-    const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    document.body.appendChild(s);
-    return true;
-  }
-
+  // The popunder script is already attached at page load (see index.html) —
+  // it fires on the user's next click somewhere on the page, which this
+  // click itself usually is. Adsterra also frequency-caps popunders
+  // (once every few hours per browser), so it won't fire every single
+  // time — that's the ad network's own anti-spam limit, not a bug.
   function handleWatchAd(anchorEl) {
-    const triggered = triggerPopunderAd();
-    if (!triggered) {
+    const src = BR.config.ADSTERRA_POPUNDER_SRC;
+    if (!src || src.includes('YOUR-')) {
       toast('Ad network not connected yet — add your Adsterra script in config.js', 'default', 'fa-triangle-exclamation');
       return;
     }
