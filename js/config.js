@@ -19,7 +19,8 @@ BR.config = {
 
 // Adsterra Dashboard > Websites > your site > Popunder > Get Code — the
 // <script src="..."> URL. Injected dynamically when "Watch Ad" is clicked.
-ADSTERRA_POPUNDER_SRC: 'https://pl30771246.effectivecpmnetwork.com/ed/72/90/ed7290c960883deca34b14423889ecce.js',
+ADSTERRA_POPUNDER_SRC: '<script src="https://pl30771245.effectivecpmnetwork.com/98/a7/d8/98a7d8ea604e22575b76c99bd3ca80dd.js"></script>
+',
 
   ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026BR', // front-end gate only; real security = is_admin flag + RLS
 
