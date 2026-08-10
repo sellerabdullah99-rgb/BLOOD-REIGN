@@ -20,7 +20,7 @@ BR.config = {
 
    // Adsterra Dashboard > Websites > your site > Direct Link — paste it here.
    // Real ad revenue: clicking "Watch Ad" opens this in a new tab.
-   ADSTERRA_DIRECT_LINK: 'https://www.effectivecpmnetwork.com/df2a59e2?key=2970b49edb2f65b6386f00f43813297b',
+   ADSTERRA_DIRECT_LINK: 'https://www.effectivecpmnetwork.com/ep2yf74m?key=25e5e19e195994dd87ade18d6440981c',
 
   ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026BR', // front-end gate only; real security = is_admin flag + RLS
 
