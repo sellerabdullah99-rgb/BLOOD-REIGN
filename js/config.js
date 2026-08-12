@@ -9,13 +9,13 @@
 window.BR = window.BR || {};
 
 BR.config = {
-  SUPABASE_URL: 'YOUR_SUPABASE_PROJECT_URL', // e.g. https://xxxxxxxxxxxx.supabase.co
-  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+  SUPABASE_URL: 'https://rowuasvztcozsiaumrst.supabase.co', // e.g. https://xxxxxxxxxxxx.supabase.co
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvd3Vhc3Z6dGNvenNpYXVtcnN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxOTExMjEsImV4cCI6MjEwMTc2NzEyMX0.yxvs59Hb1UpuHrdjcRA6pqqam2DtNQBMrSGALw3ZCq0',
 
   // Discord Server Settings > Integrations > Webhooks > New Webhook > Copy URL
   DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1535228730304364544/InB26aL6yi9Aqh6IscIN9ldPyXkagkf9qRmng49gImfl6MdqM1gPmo0UyQyVAokq4p5O',
   // Your Discord server invite, e.g. https://discord.gg/yourinvite — used for the support button
-  DISCORD_INVITE_URL: 'https://discord.gg/YOUR_INVITE_CODE',
+  DISCORD_INVITE_URL: 'https://discord.gg/5WPTSeZvB',
 
   // ⚠️ PENDING: rewarded-ad network setup — switching to Monetag (Adsterra
   // popunder was removed after it served a scammy "FB hacked" push ad).
