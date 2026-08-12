@@ -23,7 +23,7 @@ BR.config = {
   // that's what caused the scam ad before), paste its URL below, then
   // load it at page load in index.html the same way the old Adsterra
   // block did (see git history / ask Claude to re-add the loader).
-  AD_NETWORK_SCRIPT_SRC: 'https://YOUR-MONETAG-SCRIPT-URL-HERE',
+  AD_NETWORK_SCRIPT_SRC: 'https://omg10.com/4/11560971',
 
   ADMIN_TAP_GATE_PASSWORD: 'bloodreign2026BR', // front-end gate only; real security = is_admin flag + RLS
 
