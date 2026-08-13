@@ -72,9 +72,15 @@ BR.admin = (function () {
         <div class="admin-row-actions">
           ${t.status === 'UPCOMING' ? `<button class="btn btn-sm btn-outline" data-go-live="${t.id}"><i class="fa-solid fa-tower-broadcast"></i> Go Live</button>` : ''}
           ${t.status === 'LIVE' ? `<button class="btn btn-sm btn-outline" data-complete-tournament="${t.id}">Complete Tournament</button>` : ''}
+          ${t.status !== 'COMPLETED' ? `<button class="btn btn-sm btn-outline" data-set-room="${t.id}"><i class="fa-solid fa-key"></i> Set Room</button>` : ''}
           <button class="btn btn-sm btn-ghost" data-delete-tournament="${t.id}"><i class="fa-solid fa-trash"></i></button>
         </div>
       </div>`).join('');
+
+    $$('[data-set-room]', el).forEach(btn => btn.addEventListener('click', () => {
+      const t = tournaments.find(x => x.id === btn.dataset.setRoom);
+      if (t) openSetRoomModal(t);
+    }));
 
     $$('[data-go-live]', el).forEach(btn => btn.addEventListener('click', async () => {
       const res = await BR.data.adminSetTournamentStatus(btn.dataset.goLive, 'LIVE');
@@ -95,6 +101,34 @@ BR.admin = (function () {
       }
       renderTournamentManager();
     }));
+  }
+
+  function openSetRoomModal(t) {
+    BR.ui.openModal('setRoomModal', {
+      title: `Room Details — ${escapeHtml(t.name)}`,
+      bodyHTML: `
+        <p class="muted" style="margin-bottom:14px;font-size:var(--text-sm)">Room ID/Password stay hidden from players (enforced server-side) until the reveal time you set below.</p>
+        <label class="field-label">Room ID</label>
+        <input class="input" id="roomIdInput" placeholder="e.g. 123456789" style="margin-bottom:12px">
+        <label class="field-label">Room Password</label>
+        <input class="input" id="roomPasswordInput" placeholder="e.g. br2026" style="margin-bottom:12px">
+        <label class="field-label">Reveal At</label>
+        <input class="input" id="roomRevealInput" type="datetime-local" style="margin-bottom:20px">
+        <button class="btn btn-primary btn-block" id="saveRoomBtn"><i class="fa-solid fa-key"></i> Save Room Details</button>
+      `,
+    });
+    $('#saveRoomBtn').addEventListener('click', async () => {
+      const roomId = $('#roomIdInput').value.trim();
+      const password = $('#roomPasswordInput').value.trim();
+      const reveal = $('#roomRevealInput').value;
+      if (!roomId || !password) { toast('Enter Room ID and Password', 'default', 'fa-triangle-exclamation'); return; }
+      if (!reveal) { toast('Pick a reveal time', 'default', 'fa-triangle-exclamation'); return; }
+      const res = await BR.data.adminSetTournamentRoom(t.id, roomId, password, new Date(reveal).toISOString());
+      if (res.ok) {
+        toast('Room details saved — will reveal at the set time', 'success');
+        BR.ui.closeModal('setRoomModal');
+      } else toast(res.error || 'Failed', 'default', 'fa-triangle-exclamation');
+    });
   }
 
   async function openCompleteTournamentModal(t) {

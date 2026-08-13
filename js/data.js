@@ -313,6 +313,40 @@ BR.data = (function () {
     return { ok: true };
   }
 
+  // Sets the Room ID/Password + when it should reveal to registered
+  // players. RLS on tournament_rooms hides the actual values until
+  // room_reveal_time passes — this isn't just a UI hide.
+  async function adminSetTournamentRoom(tournamentId, roomId, roomPassword, revealTime) {
+    if (BR.isConfigured) {
+      const { error: err1 } = await BR.sb.from('tournaments').update({ room_reveal_time: revealTime }).eq('id', tournamentId);
+      if (err1) return { ok: false, error: err1.message };
+      const { error: err2 } = await BR.sb.from('tournament_rooms')
+        .upsert({ tournament_id: tournamentId, room_id: roomId, room_password: roomPassword, updated_at: new Date().toISOString() }, { onConflict: 'tournament_id' });
+      if (err2) return { ok: false, error: err2.message };
+      return { ok: true };
+    }
+    const local = _adminLocal();
+    local.rooms = local.rooms || {};
+    local.rooms[tournamentId] = { room_id: roomId, room_password: roomPassword, reveal_time: revealTime };
+    _saveAdminLocal(local);
+    return { ok: true };
+  }
+
+  // Returns { room_id, room_password } if reveal time has passed,
+  // otherwise null — Supabase RLS enforces this server-side already,
+  // this just also checks locally so the demo/local path behaves the same.
+  async function getTournamentRoom(tournamentId) {
+    if (BR.isConfigured) {
+      const { data, error } = await BR.sb.from('tournament_rooms').select('room_id, room_password').eq('tournament_id', tournamentId).maybeSingle();
+      if (error || !data) return null;
+      return data;
+    }
+    const local = _adminLocal();
+    const room = local.rooms && local.rooms[tournamentId];
+    if (!room || !room.reveal_time) return null;
+    return Date.now() >= new Date(room.reveal_time).getTime() ? { room_id: room.room_id, room_password: room.room_password } : null;
+  }
+
   async function adminGetTournamentParticipants(tournamentId) {
     if (BR.isConfigured) {
       const { data, error } = await BR.sb.rpc('admin_get_tournament_participants', { p_tournament_id: tournamentId });
@@ -661,6 +695,7 @@ BR.data = (function () {
     watchAd, claimDailyLogin, earnShareBonus, redeemReward, getCoinTransactions,
     createOrder, getOrders, updateOrderStatus,
     adminCreateTournament, adminDeleteTournament, adminSetWinner, adminSetTournamentStatus,
+    adminSetTournamentRoom, getTournamentRoom,
     adminGetTournamentParticipants, adminCompleteTournament,
     adminGrantCoins, getCoinGrantLog, getAnalytics,
     getMyTeam, createTeam, addTeamMember, removeTeamMember, registerTeamForTournament, isTeamRegistered,
