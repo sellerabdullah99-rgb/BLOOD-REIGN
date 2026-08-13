@@ -10,23 +10,9 @@ BR.tournaments = (function () {
   let allTournaments = [];
   let countdownInterval = null;
   let myRegistrations = {};
-  let myRooms = {};
 
   async function refreshMyRegistrations() {
     myRegistrations = await BR.data.getMyRegistrations();
-  }
-
-  // For each tournament the player is registered in and isn't completed,
-  // check if room details have revealed yet (RLS enforces this server-side —
-  // this just fetches whatever the server is willing to give us).
-  async function refreshMyRooms() {
-    const ids = Object.keys(myRegistrations).filter(id => {
-      const t = allTournaments.find(x => x.id === id);
-      return t && t.status !== 'COMPLETED' && t.room_reveal_time;
-    });
-    const results = await Promise.all(ids.map(id => BR.data.getTournamentRoom(id)));
-    myRooms = {};
-    ids.forEach((id, i) => { if (results[i]) myRooms[id] = results[i]; });
   }
 
   function getMyRegistration(tournamentId) {
@@ -64,25 +50,12 @@ BR.tournaments = (function () {
           </div>
           ${reg
             ? `<div class="tc-registered"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(reg.label)}</div>
-               ${roomBlockHTML(t)}
                <button class="btn btn-outline btn-block" disabled><i class="fa-solid fa-lock"></i> ALREADY REGISTERED</button>`
             : `<button class="btn btn-primary btn-block" data-join-tournament="${t.id}">
                 <i class="fa-brands fa-discord"></i> JOIN NOW
               </button>`}`
       }
     </div>`;
-  }
-
-  function roomBlockHTML(t) {
-    if (!t.room_reveal_time) return '';
-    const room = myRooms[t.id];
-    if (room) {
-      return `<div class="tc-room"><i class="fa-solid fa-key"></i> Room ID: <strong>${escapeHtml(room.room_id)}</strong> · Password: <strong>${escapeHtml(room.room_password)}</strong></div>`;
-    }
-    const revealed = Date.now() >= new Date(t.room_reveal_time).getTime();
-    return revealed
-      ? `<div class="tc-room muted">Room details loading…</div>`
-      : `<div class="tc-room muted"><i class="fa-solid fa-lock"></i> Room reveals at ${new Date(t.room_reveal_time).toLocaleString()}</div>`;
   }
 
   function wireCardButtons(container) {
@@ -280,7 +253,6 @@ BR.tournaments = (function () {
   async function render() {
     await refreshMyRegistrations();
     allTournaments = await BR.data.getTournaments();
-    await refreshMyRooms();
     renderSectionTabs();
     renderFilterTabs();
     renderList();
