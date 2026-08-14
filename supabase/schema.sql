@@ -47,7 +47,22 @@ create table if not exists public.tournaments (
   start_time       timestamptz not null,
   winner_username  text,
   is_grand_final   boolean not null default false,
+  -- When the custom-room ID/password should become visible. NULL = not set.
+  room_reveal_time timestamptz,
   created_at       timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- TOURNAMENT ROOMS — the actual Room ID/Password. Kept in a SEPARATE
+-- table (not just extra columns on tournaments, which is publicly
+-- readable) so RLS can genuinely hide these values until room_reveal_time
+-- passes — not just hide them in the UI.
+-- ------------------------------------------------------------
+create table if not exists public.tournament_rooms (
+  tournament_id  uuid primary key references public.tournaments(id) on delete cascade,
+  room_id        text,
+  room_password  text,
+  updated_at     timestamptz not null default now()
 );
 
 -- ------------------------------------------------------------

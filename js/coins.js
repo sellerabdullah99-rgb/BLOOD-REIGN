@@ -36,7 +36,7 @@ BR.coins = (function () {
     const actions = [
       { key: 'ad', icon: 'fa-play', label: 'Watch Ad', sub: 'Up to 5 per day', amount: '+10' },
       { key: 'daily', icon: 'fa-calendar-check', label: 'Daily Login', sub: `${profile?.current_streak || 0} day streak`, amount: '+5' },
-
+      { key: 'share', icon: 'fa-share-nodes', label: 'Share a Tournament', sub: 'Once per share', amount: '+15' },
     ];
     el.innerHTML = actions.map(a => `
       <button class="card card-hover earn-action-row" data-earn="${a.key}">

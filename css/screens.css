@@ -66,6 +66,8 @@
 .tc-sponsor { font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-3); }
 .tc-winner { color: var(--gold); font-weight: 700; margin-bottom: var(--space-2); }
 .tc-registered { color: var(--success, #22c55e); font-size: var(--text-sm); font-weight: 600; margin-bottom: var(--space-2); display: flex; align-items: center; gap: 6px; }
+.tc-room { font-size: var(--text-sm); margin-bottom: var(--space-2); padding: 8px 10px; background: var(--card-bg-hover, #20203a); border-radius: var(--radius); }
+.tc-room strong { color: var(--gold); }
 .tc-players { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .tc-players .progress { flex: 1; }
 .tc-players .muted { font-size: var(--text-xs); white-space: nowrap; }

@@ -52,6 +52,31 @@ create policy "admins manage tournaments"
   with check (public.is_admin());
 
 -- ------------------------------------------------------------
+-- TOURNAMENT ROOMS — genuinely hidden (not just UI-hidden) until
+-- room_reveal_time passes. A select query simply returns 0 rows for
+-- non-admins before that time — the app never even receives the values.
+-- ------------------------------------------------------------
+alter table public.tournament_rooms enable row level security;
+
+create policy "room credentials visible only after reveal time"
+  on public.tournament_rooms for select
+  using (
+    public.is_admin()
+    or exists (
+      select 1 from public.tournaments t
+      where t.id = tournament_rooms.tournament_id
+        and t.room_reveal_time is not null
+        and now() >= t.room_reveal_time
+    )
+  );
+
+create policy "admins manage room credentials"
+  on public.tournament_rooms for all
+  using (public.is_admin())
+  with check (public.is_admin());
+  with check (public.is_admin());
+
+-- ------------------------------------------------------------
 -- REGISTRATIONS — users see/create their own, admins see all
 -- ------------------------------------------------------------
 create policy "users read own registrations"

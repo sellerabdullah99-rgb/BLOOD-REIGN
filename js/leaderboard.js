@@ -60,9 +60,19 @@ BR.leaderboard = (function () {
   async function render() {
     renderScopeToggle();
     const list = await BR.data.getLeaderboard();
+    renderNoActivityBanner(list);
     renderPodium(list.slice(0, 3));
     renderList(list.slice(3), 4);
     renderMyRank(list);
+  }
+
+  function renderNoActivityBanner(list) {
+    const el = $('#leaderboardNoActivity');
+    if (!el) return;
+    const allZero = list.length > 0 && list.every(p => !p.total_kills);
+    el.innerHTML = allZero
+      ? `<div class="empty-state" style="padding:16px"><i class="fa-solid fa-flag-checkered"></i> No kills recorded yet — stats fill in once tournaments are completed by admins.</div>`
+      : '';
   }
 
   function init() {

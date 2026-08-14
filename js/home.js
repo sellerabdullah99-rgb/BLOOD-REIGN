@@ -94,12 +94,12 @@ BR.home = (function () {
     ]);
 
     const live = tournaments.filter(t => t.status === 'LIVE');
-    const totalPlayers = tournaments.reduce((s, t) => s + (t.current_players || 0), 0) + 3247;
+    const totalPlayers = tournaments.reduce((s, t) => s + (t.current_players || 0), 0);
     const prizePool = tournaments.reduce((s, t) => s + (parseInt(t.prize_label) || 0), 0);
 
     const statPlayers = $('#statPlayers'); if (statPlayers) animateStat(statPlayers, totalPlayers);
-    const statLive = $('#statLive'); if (statLive) animateStat(statLive, live.length || 12);
-    const statPrize = $('#statPrize'); if (statPrize) animateStat(statPrize, prizePool || 52000);
+    const statLive = $('#statLive'); if (statLive) animateStat(statLive, live.length);
+    const statPrize = $('#statPrize'); if (statPrize) animateStat(statPrize, prizePool);
 
     renderTicker(announcements.length ? announcements : ['Welcome to BLOOD REIGN']);
     renderFeatured(live[0]);
